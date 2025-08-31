@@ -2,7 +2,12 @@
 title: "Tugas MPDW Praktikum"
 author: "M.Taqy Abiyu Dzakwan"
 date: "2025-08-29"
-output: html_document
+output: 
+  html_document:
+    theme: cerulean
+    toc: yes
+    toc_float:
+      collapsed: true
 ---
 
 # Library
