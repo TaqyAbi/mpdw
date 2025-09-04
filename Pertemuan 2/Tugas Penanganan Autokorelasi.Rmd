@@ -9,6 +9,7 @@ output:
     toc_float:
       collapsed: true
 ---
+# IPM Provinsi Lampung
 
 # Library
 ```{r}
@@ -23,6 +24,7 @@ library(orcutt)
 ```{r}
 data <- read_excel("D:\\TUGAS IPB\\Semester 5\\mpdw\\Pertemuan 2\\Data\\Data IPM.xlsx")
 head(data)
+dim(data)
 ```
 # Data Eksploration
 ```{r}
@@ -46,7 +48,7 @@ Persamaan Regresi yang didapatkan adalah $$y_i=-1.080+0.5693x_t$$
 ```{r}
 dwtest(regres)
 ```
-Pada hasil dapat diketahui bahwa terdapat autokorelasi dikarenakan nilai hasil uji DW berada di luar rentang DU \< DW \< 4-DU atau $1.331 < DW < 2.669$. Diperkuat juga nilai p-value yang kurang dari 0.05 sehingga menolak H0 yang mana berarti ada autokorelasi.
+Pada hasil dapat diketahui bahwa terdapat autokorelasi dikarenakan nilai hasil uji DW berada di luar rentang DU \< DW \< 4-DU atau $1.3605 < DW < 2.6395$. Diperkuat juga nilai p-value yang kurang dari 0.05 sehingga menolak H0 yang mana berarti ada autokorelasi.
 
 ```{r}
 acf(data, main = "Plot Autokorelasi (ACF)")
@@ -64,7 +66,7 @@ Berdasarkan hasil plot ACF dan PACF, terlihat bahwa ACF menunjukkan penurunan be
 modelCO<-cochrane.orcutt(regres)
 modelCO
 ```
-Hasil keluaran model setelah dilakukan penanganan adalah sebagai berikut. $$y_i=-976.439847+0.517918x_t$$ Hasil Durbin Watson meningkat dari $0.43648$ menjadi $1.10911$ setelah koreksi. Meskipun nilai DW mengalami perbaikan, hasil *hasil belum berada pada rentang non-autokorelasi* pada DU \< DW \< 4-DU atau $1.331 < DW < 2.669$. Hal tersebut juga didukung dengan nilai *p-value* \< 0.05, artinya cukup bukti untuk menyatakan bahwa sisaan terdapat autokorelasi pada taraf nyata 5%. Sehingga metode ini masih belum bisa menangani Autokorelasinya. sebagai tambahan informasi Untuk nilai $ρ ̂$ optimum yang digunakan adalah $0.76584$. Nilai tersebut dapat diketahui dengan *syntax* berikut.
+Hasil keluaran model setelah dilakukan penanganan adalah sebagai berikut. $$y_i=-976.439847+0.517918x_t$$ Hasil Durbin Watson meningkat dari $0.43648$ menjadi $1.10911$ setelah koreksi. Meskipun nilai DW mengalami perbaikan, hasil *hasil belum berada pada rentang non-autokorelasi* pada DU \< DW \< 4-DU atau $1.3605 < DW < 2.6395$. Hal tersebut juga didukung dengan nilai *p-value* \< 0.05, artinya cukup bukti untuk menyatakan bahwa sisaan terdapat autokorelasi pada taraf nyata 5%. Sehingga metode ini masih belum bisa menangani Autokorelasinya. sebagai tambahan informasi Untuk nilai $ρ ̂$ optimum yang digunakan adalah $0.76584$. Nilai tersebut dapat diketahui dengan *syntax* berikut.
 
 ```{r}
 rho <- modelCO$rho
@@ -143,7 +145,7 @@ Setelah dilakukan tranformasi balik, didapatkan model dengan metode Hildreth-Lu 
 ```{r}
 dwtest(modelHL)
 ```
-Hasil uji Durbin-Watson juga menunjukkan bawah nilai DW sebesar $1.1092$ berada pada diluar selang daerah tidak ada autokorelasi, yaitu pada rentang DU \< DW \< 4-DU atau $1.331 < DW < 2.669$. Hal tersebut juga didukung oleh *p-value* sebesar $0.01428$, di mana *p-value* \> $\alpha$ < 5%. Artinya tolak $H_0$ atau cukup bukti menyatakan bahwa ada autokorelasi dalam data nilai IPM dengan metode Hildreth-Lu pada taraf nyata 5%.
+Hasil uji Durbin-Watson juga menunjukkan bawah nilai DW sebesar $1.1092$ berada pada diluar selang daerah tidak ada autokorelasi, yaitu pada rentang DU \< DW \< 4-DU atau $1.3605 < DW < 2.6395$. Hal tersebut juga didukung oleh *p-value* sebesar $0.01428$, di mana *p-value* \> $\alpha$ < 5%. Artinya tolak $H_0$ atau cukup bukti menyatakan bahwa ada autokorelasi dalam data nilai IPM dengan metode Hildreth-Lu pada taraf nyata 5%.
 
 # Perbandingan nilai SSE 3 metode
 Terakhir, akan dibandingkan nilai SSE dari ketiga metode (metode awal, metode Cochrane-Orcutt, dan Hildreth-Lu).
