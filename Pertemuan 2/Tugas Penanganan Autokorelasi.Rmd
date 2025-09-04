@@ -1,0 +1,165 @@
+---
+title: "Tugas Penanganan Autokorelasi"
+author: "M.Taqy Abiyu Dzakwan"
+date: "2025-08-29"
+output: 
+  html_document:
+    theme: cerulean
+    toc: yes
+    toc_float:
+      collapsed: true
+---
+
+# Library
+```{r}
+library(readxl)
+library(lmtest)
+#install.packages("https://cran.r-project.org/src/contrib/Archive/orcutt/orcutt_2.0.tar.gz", repos = NULL, type = "source")
+library(orcutt)
+```
+
+# Data Preparation
+
+```{r}
+data <- read_excel("D:\\TUGAS IPB\\Semester 5\\mpdw\\Pertemuan 2\\Data\\Data IPM.xlsx")
+head(data)
+```
+# Data Eksploration
+```{r}
+data.ts<-ts(data$IPM)
+data.ts
+```
+```{r}
+ts.plot(data.ts, xlab="Time Period ", ylab="IPM", main= "Time Series Plot of IPM")
+points(data.ts)
+```
+Secara umum, grafik deret waktu IPM menunjukkan adanya **tren meningkat dari waktu ke waktu**, di mana nilai IPM terus bertambah secara bertahap tanpa adanya pola musiman atau fluktuasi besar. Hal ini mengindikasikan adanya perkembangan positif dan pertumbuhan yang relatif stabil sepanjang periode pengamatan.
+
+# Regresi
+
+```{r}
+regres <- lm(IPM ~ Tahun, data = data)
+summary(regres)
+```
+Persamaan Regresi yang didapatkan adalah $$y_i=-1.080+0.5693x_t$$
+
+```{r}
+dwtest(regres)
+```
+Pada hasil dapat diketahui bahwa terdapat autokorelasi dikarenakan nilai hasil uji DW berada di luar rentang DU \< DW \< 4-DU atau $1.331 < DW < 2.669$. Diperkuat juga nilai p-value yang kurang dari 0.05 sehingga menolak H0 yang mana berarti ada autokorelasi.
+
+```{r}
+acf(data, main = "Plot Autokorelasi (ACF)")
+```
+
+```{r}
+pacf(data, main = "Plot Parsial Autokorelasi (PACF)")
+```
+Berdasarkan hasil plot ACF dan PACF, terlihat bahwa ACF menunjukkan penurunan bertahap (tailing off) sedangkan PACF terpotong pada lag ke-1, yang mengindikasikan adanya autokorelasi positif jangka pendek. Pola ini sesuai dengan karakteristik proses autoregressive orde 1 atau AR(1), di mana nilai saat ini dipengaruhi secara signifikan oleh nilai sebelumnya. Dengan demikian, model yang paling sesuai untuk data ini adalah model AR(1), tanpa indikasi kuat adanya komponen moving average (MA).
+
+# Penanganan Autokorelasi
+## Metode Cochrane Orcutt
+### Pakai package
+```{r}
+modelCO<-cochrane.orcutt(regres)
+modelCO
+```
+Hasil keluaran model setelah dilakukan penanganan adalah sebagai berikut. $$y_i=-976.439847+0.517918x_t$$ Hasil Durbin Watson meningkat dari $0.43648$ menjadi $1.10911$ setelah koreksi. Meskipun nilai DW mengalami perbaikan, hasil *hasil belum berada pada rentang non-autokorelasi* pada DU \< DW \< 4-DU atau $1.331 < DW < 2.669$. Hal tersebut juga didukung dengan nilai *p-value* \< 0.05, artinya cukup bukti untuk menyatakan bahwa sisaan terdapat autokorelasi pada taraf nyata 5%. Sehingga metode ini masih belum bisa menangani Autokorelasinya. sebagai tambahan informasi Untuk nilai $ρ ̂$ optimum yang digunakan adalah $0.76584$. Nilai tersebut dapat diketahui dengan *syntax* berikut.
+
+```{r}
+rho <- modelCO$rho
+rho
+```
+
+### Transformasi Manual
+```{r}
+IPM <- data$IPM
+Tahun <- data$Tahun
+y.transformed <- IPM[-1] - (IPM[-24] * rho)
+x.transformed <- Tahun[-1] - (Tahun[-24] * rho)
+model.t <- lm(y.transformed ~ x.transformed)
+summary(model.t)
+```
+### Mencari Penduga Koefisien Regresi setelah Transformasi ke Persamaan Awal
+```{r}
+b0bintang <- model.t$coefficients[-2]
+b0 <- b0bintang/(1-rho)
+b1 <- model.t$coefficients[-1]
+b0bintang
+b0
+b1
+```
+Persamaannya adalah sebagai berikut $β_0^*=-1109.943+0.76584*-1109.943$ dan $β_1^*=0.5839735$.
+
+## Metode Hildreth-Lu
+
+```{r}
+hildreth.lu.func<- function(r, regres){
+  x <- model.matrix(regres)[,-1]
+  y <- model.response(model.frame(regres))
+  n <- length(y)
+  t <- 2:n
+  y <- y[t]-r*y[t-1]
+  x <- x[t]-r*x[t-1]
+  
+  return(lm(y~x))
+}
+```
+
+### Pencarian rho yang meminimumkan SSE
+
+```{r}
+r <- c(seq(0.1,0.9, by= 0.1))
+tab <- data.frame("rho" = r, "SSE" = sapply(r, function(i){deviance(hildreth.lu.func(i, regres))}))
+round(tab, 4)
+```
+
+Pada hasil di atas terlihat ρ minimum ketika 0.8. Namun, hasil tersebut masih kurang teliti sehingga akan dicari kembali ρ yang lebih optimum dengan ketelitian yang lebih. Jika sebelumnya jarak antar ρ yang dicari adalah 0.1, kali ini jarak antar ρ adalah 0.001 dan dilakukan pada selang 0.2 sampai dengan 0.5.
+
+```{r}
+rOpt <- seq(0.6,0.9, by= 0.001)
+tabOpt <- data.frame("rho" = rOpt, "SSE" = sapply(rOpt, function(i){deviance(hildreth.lu.func(i, regres))}))
+head(tabOpt[order(tabOpt$SSE),])
+```
+
+Perhitungan menunjukkan bahwa nilai $ρ$ optimum, yaitu saat SSE terkecil terdapat pada nilai $ρ=0.766$.
+
+```{r}
+par(mfrow = c(1,1))
+plot(tab$SSE ~ tab$rho , type = "l", xlab = "Rho", ylab = "SSE")
+abline(v = tabOpt[tabOpt$SSE==min(tabOpt$SSE),"rho"], lty = 2, col="red",lwd=2)
+text(x=0.766, y=0.4268003, labels = "rho=0.766", cex = 0.8)
+```
+
+```{r}
+modelHL <- hildreth.lu.func(0.766, regres)
+summary(modelHL)
+```
+```{r}
+cat("y = ", coef(modelHL)[1]/(1-0.766), "+", coef(modelHL)[2],"x", sep = "")
+```
+Setelah dilakukan tranformasi balik, didapatkan model dengan metode Hildreth-Lu sebagai berikut. $$y_i=-976.3627+0.51788x_t$$
+
+```{r}
+dwtest(modelHL)
+```
+Hasil uji Durbin-Watson juga menunjukkan bawah nilai DW sebesar $1.1092$ berada pada diluar selang daerah tidak ada autokorelasi, yaitu pada rentang DU \< DW \< 4-DU atau $1.331 < DW < 2.669$. Hal tersebut juga didukung oleh *p-value* sebesar $0.01428$, di mana *p-value* \> $\alpha$ < 5%. Artinya tolak $H_0$ atau cukup bukti menyatakan bahwa ada autokorelasi dalam data nilai IPM dengan metode Hildreth-Lu pada taraf nyata 5%.
+
+# Perbandingan nilai SSE 3 metode
+Terakhir, akan dibandingkan nilai SSE dari ketiga metode (metode awal, metode Cochrane-Orcutt, dan Hildreth-Lu).
+```{r}
+sseModelawal <- anova(regres)$`Sum Sq`[-1]
+sseModelCO <- anova(model.t)$`Sum Sq`[-1]
+sseModelHL <- anova(modelHL)$`Sum Sq`[-1]
+mseModelawal <- sseModelawal/length(IPM)
+mseModelCO <- sseModelCO/length(IPM)
+mseModelHL <- sseModelHL/length(IPM)
+akurasi <- matrix(c(sseModelawal,sseModelCO,sseModelHL,
+                    mseModelawal,mseModelCO,mseModelHL),nrow=2,ncol=3,byrow = T)
+colnames(akurasi) <- c("Model Awal", "Model Cochrane-Orcutt", "Model Hildreth-Lu")
+row.names(akurasi) <- c("SSE","MSE")
+akurasi
+```
+
+Berdasarkan hasil tersebut dapat diketahui bahwa penanganan autokorelasi dengan metode Cochrane–Orcutt dan Hildreth–Lu mampu menurunkan nilai SSE dan MSE dibandingkan model awal. Nilai SSE model awal adalah $1.21969714$ dengan MSE $0.08131314$, sedangkan pada model Cochrane–Orcutt nilai SSE turun menjadi $0.48608090$ dengan MSE $0.03240539$. Model Hildreth–Lu memberikan hasil yang lebih baik lagi dengan SSE sebesar $0.42680029$ dan MSE sebesar $0.02845335$. Walau keduanya telah berhasil menurunkan nilai MSE dan SSE tetapi keduanya belum berhasil menghilangkan autokorelasi pada data.
+
